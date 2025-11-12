@@ -65,7 +65,6 @@ create_vpc_bridge() {
     local bridge_name="$1"
     local vpc_cidr="$2"
     
-    # Extract base IP for bridge (e.g., 10.0.0.1 from 10.0.0.0/16)
     local base_network=$(get_base_network "$vpc_cidr")
     local bridge_ip="${base_network}.0.1"
     local prefix="${vpc_cidr#*/}"
@@ -91,19 +90,14 @@ create_vpc_bridge() {
 create_subnet() {
     local vpc_name="$1"
     local vpc_cidr="$2"
-    local subnet_type="$3"      # public or private
-    local subnet_index="$4"     # 1, 2, 3, etc.
+    local subnet_type="$3"      
+    local subnet_index="$4"     
     local bridge_name="$5"
     
-    # Generate subnet CIDR dynamically
-    # VPC 10.0.0.0/16, index 1 -> 10.0.1.0/24
+
     local subnet_cidr=$(generate_subnet_cidr "$vpc_cidr" "$subnet_index")
-    
-    # Generate names
     local namespace=$(get_namespace_name "$vpc_name" "$subnet_type")
     read veth_name veth_br_name <<< $(get_veth_names "$vpc_name" "$subnet_type")
-    
-    # Get IPs
     local host_ip=$(get_host_ip "$subnet_cidr")
     local gateway_ip=$(get_gateway_ip "$subnet_cidr")
     local subnet_prefix="${subnet_cidr#*/}"
@@ -160,7 +154,6 @@ configure_bridge_routing() {
     local bridge_name="$1"
     local vpc_name="$2"
     
-    # Get all subnets for this VPC
     local subnet_types=$(get_vpc_subnet_types "$vpc_name")
     
     # Add gateway IP for each subnet on the bridge
@@ -382,10 +375,23 @@ exec_in_subnet() {
     local command=("$@")
     
     # Get namespace
-    local namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type")
+    local namespace
+    if ! namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type"); then
+        log_error "Subnet '$subnet_type' does not exist in VPC '$vpc_name'"
+        log_info "Available subnets:"
+        get_vpc_subnet_types "$vpc_name" | while read -r st; do
+            echo "  - $st"
+        done
+        exit 1
+    fi
+    
+    if [[ -z "$namespace" ]]; then
+        log_error "Subnet '$subnet_type' does not exist in VPC '$vpc_name'"
+        exit 1
+    fi
     
     if ! namespace_exists "$namespace"; then
-        log_error "Subnet $subnet_type does not exist in VPC $vpc_name"
+        log_error "Namespace '$namespace' does not exist (state may be out of sync)"
         exit 1
     fi
     

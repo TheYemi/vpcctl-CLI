@@ -15,9 +15,7 @@ configure_nat_gateway() {
     local vpc_cidr="$2"
     local bridge_name="$3"
     
-    # Get the internet-facing interface
     local internet_iface=$(get_internet_interface)
-    log_info "  Detected internet interface: $internet_iface"
     
     # Generate veth pair names for host connection
     local veth_host="veth-${vpc_name}-host"
@@ -104,35 +102,17 @@ update_nat_rules_for_peering() {
     local vpc_cidr=$(get_vpc_cidr "$vpc_name")
     local internet_iface=$(get_internet_interface)
     
-    log_info "  Updating NAT rules to exclude peered VPC $peer_vpc_cidr"
+    log_info "  Updating NAT rules to exclude peered VPC"
     
-    # Remove old broad NAT rule
-    log_info "    Removing old NAT rule for $vpc_cidr"
-    iptables -t nat -D POSTROUTING -s "$vpc_cidr" -o "$internet_iface" -j MASQUERADE 2>/dev/null || true
-    
-    # Get all peered VPCs and build exclusion list
-    local peerings=$(get_vpc_peerings "$vpc_name")
-    local exclusions=""
-    
-    for peer in $peerings; do
-        local peer_cidr=$(get_vpc_cidr "$peer")
-        if [[ -n "$exclusions" ]]; then
-            exclusions="$exclusions ! -d $peer_cidr"
-        else
-            exclusions="! -d $peer_cidr"
-        fi
+    # Delete all NAT rules for this VPC
+    iptables -t nat -L POSTROUTING -n --line-numbers | grep "$vpc_cidr" | awk '{print $1}' | sort -rn | while read line; do
+        iptables -t nat -D POSTROUTING "$line" 2>/dev/null || true
     done
     
-    # Add new NAT rule that excludes all peered VPC networks
-    if [[ -n "$exclusions" ]]; then
-        log_info "    Adding new NAT rule excluding: $exclusions"
-        iptables -t nat -A POSTROUTING -s "$vpc_cidr" $exclusions -o "$internet_iface" -j MASQUERADE
-    else
-        # No exclusions, add back the original rule
-        iptables -t nat -A POSTROUTING -s "$vpc_cidr" -o "$internet_iface" -j MASQUERADE
-    fi
+    # Add new rule excluding the peer
+    iptables -t nat -A POSTROUTING -s "$vpc_cidr" ! -d "$peer_vpc_cidr" -o "$internet_iface" -j MASQUERADE
     
-    log_success "  NAT rules updated for peering"
+    log_success "  NAT rules updated"
 }
 
 #############################################
@@ -143,26 +123,15 @@ cleanup_nat_rules() {
     local vpc_cidr="$1"
     local internet_iface=$(get_internet_interface)
     
-    # Remove NAT rule
-    log_info "    Removing NAT rule"
-    iptables -t nat -D POSTROUTING -s "$vpc_cidr" -o "$internet_iface" -j MASQUERADE 2>/dev/null || true
+    log_info "    Cleaning up iptables rules"
     
-    # Try to remove with exclusions (in case it was peered)
-    # This is a bit brute force but ensures cleanup
-    local rules=$(iptables -t nat -L POSTROUTING -n --line-numbers | grep "$vpc_cidr" | awk '{print $1}' | tac)
-    for rule_num in $rules; do
-        iptables -t nat -D POSTROUTING "$rule_num" 2>/dev/null || true
+    # Delete NAT rules by line number (reverse order to avoid shifting)
+    iptables -t nat -L POSTROUTING -n --line-numbers | grep "$vpc_cidr" | awk '{print $1}' | sort -rn | while read line; do
+        iptables -t nat -D POSTROUTING "$line" 2>/dev/null || true
     done
     
-    # Remove FORWARD rules
-    log_info "    Removing FORWARD rules"
-    # This is trickier - we need to find rules matching our veth-host interface
-    # For now, we'll just try common patterns
-    local veth_pattern="veth-.*-host"
-    
-    # Get line numbers of matching FORWARD rules and delete in reverse
-    local forward_rules=$(iptables -L FORWARD -n --line-numbers | grep -E "$veth_pattern" | awk '{print $1}' | tac)
-    for rule_num in $forward_rules; do
-        iptables -D FORWARD "$rule_num" 2>/dev/null || true
+    # Delete FORWARD rules by line number
+    iptables -L FORWARD -n --line-numbers | grep "$vpc_cidr" | awk '{print $1}' | sort -rn | while read line; do
+        iptables -D FORWARD "$line" 2>/dev/null || true
     done
 }

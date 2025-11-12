@@ -130,34 +130,67 @@ unpeer_vpcs() {
     iptables -D FORWARD -i "$veth_peer1" -o "$veth_peer2" -j ACCEPT 2>/dev/null || true
     iptables -D FORWARD -i "$veth_peer2" -o "$veth_peer1" -j ACCEPT 2>/dev/null || true
     
-    # Step 4: Restore NAT rules if needed
+    # Step 4: Update state first (remove peering)
+    remove_peering_from_state "$vpc1" "$vpc2"
+    
+    # Step 5: Restore NAT rules if needed
     if [[ "$vpc1_nat" == "true" ]]; then
         log_info "  Restoring NAT rules for VPC '$vpc1'"
-        # Remove vpc2 from exclusions
-        remove_peering_from_state "$vpc1" "$vpc2"
         
-        # Reconfigure NAT rules with remaining peerings
+        # Remove ALL NAT rules for vpc1
+        local nat_lines=$(iptables -t nat -L POSTROUTING -n --line-numbers | grep "$vpc1_cidr" | awk '{print $1}' | sort -rn)
+        for line_num in $nat_lines; do
+            iptables -t nat -D POSTROUTING "$line_num" 2>/dev/null || true
+        done
+        
+        # Get remaining peerings after removal
         local remaining_peerings=$(get_vpc_peerings "$vpc1")
-        if [[ -z "$remaining_peerings" ]]; then
+        local internet_iface=$(get_internet_interface)
+    
+    if [[ -z "$remaining_peerings" ]]; then
             # No more peerings, use simple NAT rule
-            local internet_iface=$(get_internet_interface)
-            iptables -t nat -D POSTROUTING -s "$vpc1_cidr" ! -d "$vpc2_cidr" -o "$internet_iface" -j MASQUERADE 2>/dev/null || true
+            log_info "    Adding simple NAT rule (no more peerings)"
             iptables -t nat -A POSTROUTING -s "$vpc1_cidr" -o "$internet_iface" -j MASQUERADE
+        else
+            # Still have peerings, rebuild with exclusions
+            local exclusions=""
+            for peer in $remaining_peerings; do
+                local peer_cidr=$(get_vpc_cidr "$peer")
+                exclusions="$exclusions ! -d $peer_cidr"
+            done
+            log_info "    Adding NAT rule with exclusions for remaining peers"
+            iptables -t nat -A POSTROUTING -s "$vpc1_cidr" $exclusions -o "$internet_iface" -j MASQUERADE
         fi
     fi
     
     if [[ "$vpc2_nat" == "true" ]]; then
         log_info "  Restoring NAT rules for VPC '$vpc2'"
+        
+        # Remove ALL NAT rules for vpc2
+        local nat_lines=$(iptables -t nat -L POSTROUTING -n --line-numbers | grep "$vpc2_cidr" | awk '{print $1}' | sort -rn)
+        for line_num in $nat_lines; do
+            iptables -t nat -D POSTROUTING "$line_num" 2>/dev/null || true
+        done
+    
+    # Get remaining peerings after removal
         local remaining_peerings=$(get_vpc_peerings "$vpc2")
+        local internet_iface=$(get_internet_interface)
+        
         if [[ -z "$remaining_peerings" ]]; then
-            local internet_iface=$(get_internet_interface)
-            iptables -t nat -D POSTROUTING -s "$vpc2_cidr" ! -d "$vpc1_cidr" -o "$internet_iface" -j MASQUERADE 2>/dev/null || true
+            # No more peerings, use simple NAT rule
+            log_info "    Adding simple NAT rule (no more peerings)"
             iptables -t nat -A POSTROUTING -s "$vpc2_cidr" -o "$internet_iface" -j MASQUERADE
+        else
+            # Still have peerings, rebuild with exclusions
+            local exclusions=""
+            for peer in $remaining_peerings; do
+                local peer_cidr=$(get_vpc_cidr "$peer")
+                exclusions="$exclusions ! -d $peer_cidr"
+            done
+            log_info "    Adding NAT rule with exclusions for remaining peers"
+            iptables -t nat -A POSTROUTING -s "$vpc2_cidr" $exclusions -o "$internet_iface" -j MASQUERADE
         fi
     fi
-    
-    # Step 5: Update state (if not already done)
-    remove_peering_from_state "$vpc1" "$vpc2"
     
     log_success "  Peering removed between '$vpc1' and '$vpc2'"
 }

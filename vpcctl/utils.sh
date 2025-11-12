@@ -10,32 +10,20 @@
 #############################################
 
 log_info() {
-    local message="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[INFO] $message"
-    echo "[$timestamp] [INFO] $message" >> "$VPCCTL_LOG_FILE"
+    echo "[INFO] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$VPCCTL_LOG_FILE"
 }
 
 log_success() {
-    local message="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[SUCCESS] $message"
-    echo "[$timestamp] [SUCCESS] $message" >> "$VPCCTL_LOG_FILE"
-}
-
-log_warning() {
-    local message="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[WARNING] $message"
-    echo "[$timestamp] [WARNING] $message" >> "$VPCCTL_LOG_FILE"
+    echo "✓ $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] SUCCESS: $1" >> "$VPCCTL_LOG_FILE"
 }
 
 log_error() {
-    local message="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[ERROR] $message" >&2
-    echo "[$timestamp] [ERROR] $message" >> "$VPCCTL_LOG_FILE"
+    echo "✗ $1" >&2
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >> "$VPCCTL_LOG_FILE"
 }
+
 
 #############################################
 # Validate CIDR format
@@ -180,8 +168,16 @@ get_veth_names() {
 get_peering_veth_names() {
     local vpc1="$1"
     local vpc2="$2"
+
+    # Shorten VPC names
+    local short1="${vpc1:0:3}"
+    local short2="${vpc2:0:3}"
+
+    # Generate compact veth names
+    local veth1="vp${short1}${short2}1"
+    local veth2="vp${short1}${short2}2"
     
-    echo "veth-peer-${vpc1}-${vpc2}-1 veth-peer-${vpc1}-${vpc2}-2"
+    echo "$veth1 $veth2"
 }
 
 #############################################

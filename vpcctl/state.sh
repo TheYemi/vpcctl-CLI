@@ -16,16 +16,6 @@ vpc_exists() {
 }
 
 #############################################
-# Get VPC data from state
-# Returns JSON object for the VPC
-#############################################
-get_vpc_data() {
-    local vpc_name="$1"
-    
-    jq -r ".vpcs.\"$vpc_name\"" "$VPCCTL_STATE_FILE"
-}
-
-#############################################
 # Save VPC to state
 # Creates a new VPC entry in state file
 #############################################
@@ -267,25 +257,13 @@ get_vpc_peerings() {
 get_subnet_namespace() {
     local vpc_name="$1"
     local subnet_type="$2"
-    jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".namespace" "$VPCCTL_STATE_FILE"
-}
-
-#############################################
-# Get subnet CIDR
-#############################################
-get_subnet_cidr() {
-    local vpc_name="$1"
-    local subnet_type="$2"
-    jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".cidr" "$VPCCTL_STATE_FILE"
-}
-
-#############################################
-# Get subnet host IP
-#############################################
-get_subnet_host_ip() {
-    local vpc_name="$1"
-    local subnet_type="$2"
-    jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".host_ip" "$VPCCTL_STATE_FILE"
+    local result=$(jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".namespace // empty" "$VPCCTL_STATE_FILE" 2>/dev/null)
+    
+    if [[ -z "$result" ]] || [[ "$result" == "null" ]]; then
+        return 1
+    fi
+    
+    echo "$result"
 }
 
 #############################################

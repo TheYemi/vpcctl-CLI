@@ -28,6 +28,7 @@ Commands:
     create      Create a new VPC with subnets
     list        List all VPCs
     describe    Show detailed information about a VPC
+    subnets     List all subnets in a VPC
     delete      Delete a VPC and all its resources
     peer        Peer two VPCs together
     unpeer      Remove peering between two VPCs
@@ -55,6 +56,9 @@ Exec Options:
     --vpc NAME                 VPC name
     --subnet TYPE              Subnet type
     -- COMMAND                 Command to execute (everything after --)
+
+Subnets Options:
+    --vpc NAME                 VPC name to get subnets
 
 Delete Options:
     --name NAME                VPC name to delete
@@ -124,6 +128,9 @@ main() {
         describe)
             cmd_describe "$@"
             ;;
+        subnets)
+            cmd_subnets "$@"
+            ;;
         delete)
             cmd_delete "$@"
             ;;
@@ -161,70 +168,28 @@ main() {
 # Creates a new VPC with specified subnets
 #############################################
 cmd_create() {
-    local vpc_name=""
-    local vpc_cidr=""
-    local subnets=""
-    local enable_nat=false
-
-    # Parse arguments
+    local vpc_name="" vpc_cidr="" subnets="" enable_nat=false
+    
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --name)
-                vpc_name="$2"
-                shift 2
-                ;;
-            --cidr)
-                vpc_cidr="$2"
-                shift 2
-                ;;
-            --subnets)
-                subnets="$2"
-                shift 2
-                ;;
-            --enable-nat)
-                enable_nat=true
-                shift
-                ;;
-            *)
-                echo "Error: Unknown option '$1'"
-                usage
-                ;;
+            --name) vpc_name="$2"; shift 2 ;;
+            --cidr) vpc_cidr="$2"; shift 2 ;;
+            --subnets) subnets="$2"; shift 2 ;;
+            --enable-nat) enable_nat=true; shift ;;
+            *) echo "Error: Unknown option '$1'"; exit 1 ;;
         esac
     done
-
-    # Validate required arguments
-    if [[ -z "$vpc_name" ]]; then
-        echo "Error: --name is required"
-        exit 1
-    fi
-
-    if [[ -z "$vpc_cidr" ]]; then
-        echo "Error: --cidr is required"
-        exit 1
-    fi
-
-    if [[ -z "$subnets" ]]; then
-        echo "Error: --subnets is required (e.g., public,private)"
-        exit 1
-    fi
-
-    # Check if VPC already exists
-    if vpc_exists "$vpc_name"; then
-        echo "Error: VPC '$vpc_name' already exists"
-        exit 1
-    fi
-
-    # Validate CIDR format
-    if ! validate_cidr "$vpc_cidr"; then
-        echo "Error: Invalid CIDR format '$vpc_cidr'"
-        exit 1
-    fi
-
-    # Create VPC
-    log_info "Creating VPC '$vpc_name' with CIDR $vpc_cidr"
+    
+    # Simple checks
+    [[ -z "$vpc_name" ]] && { echo "Error: --name required"; exit 1; }
+    [[ -z "$vpc_cidr" ]] && { echo "Error: --cidr required"; exit 1; }
+    [[ -z "$subnets" ]] && { echo "Error: --subnets required"; exit 1; }
+    
+    vpc_exists "$vpc_name" && { echo "Error: VPC '$vpc_name' already exists"; exit 1; }
+    validate_cidr "$vpc_cidr" || { echo "Error: Invalid CIDR '$vpc_cidr'"; exit 1; }
+    
     create_vpc "$vpc_name" "$vpc_cidr" "$subnets" "$enable_nat"
-
-    log_success "VPC '$vpc_name' created successfully"
+    echo "✓ VPC '$vpc_name' created successfully"
 }
 
 #############################################
@@ -266,6 +231,39 @@ cmd_describe() {
     fi
 
     describe_vpc "$vpc_name"
+}
+
+#############################################
+# Command: subnets
+# Lists all subnets in a VPC
+#############################################
+cmd_subnets() {
+    local vpc_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc|--name)
+                vpc_name="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]]; then
+        echo "Error: --vpc is required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    list_subnets "$vpc_name"
 }
 
 #############################################
