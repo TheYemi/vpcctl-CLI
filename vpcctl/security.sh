@@ -71,34 +71,6 @@ apply_security_rules() {
         ip netns exec "$namespace" iptables -A INPUT -p "$protocol" --dport "$port" -j "$target"
     done
     
-    # Step 6: Parse and apply egress rules if present
-    if jq -e '.egress' "$rules_file" > /dev/null 2>&1; then
-        log_info "    Applying egress rules from JSON"
-        
-        local egress_count=$(jq '.egress | length' "$rules_file")
-        
-        for ((i=0; i<egress_count; i++)); do
-            local port=$(jq -r ".egress[$i].port" "$rules_file")
-            local protocol=$(jq -r ".egress[$i].protocol" "$rules_file")
-            local action=$(jq -r ".egress[$i].action" "$rules_file")
-            
-            local target
-            if [[ "$action" == "allow" ]]; then
-                target="ACCEPT"
-            elif [[ "$action" == "deny" ]]; then
-                target="DROP"
-            else
-                log_warning "Unknown action '$action' for port $port, skipping"
-                continue
-            fi
-            
-            log_info "      Rule: $protocol/$port -> $action"
-            ip netns exec "$namespace" iptables -A OUTPUT -p "$protocol" --dport "$port" -j "$target"
-        done
-    fi
-    
-    log_success "  Security rules applied to $subnet_type subnet"
-    
     # Show applied rules
     echo ""
     echo "Applied iptables rules in $namespace:"
