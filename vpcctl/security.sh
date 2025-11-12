@@ -56,19 +56,14 @@ apply_security_rules() {
         local protocol=$(jq -r ".ingress[$i].protocol" "$rules_file")
         local action=$(jq -r ".ingress[$i].action" "$rules_file")
         
-        # Convert action to iptables target
-        local target
         if [[ "$action" == "allow" ]]; then
-            target="ACCEPT"
+            log_info "      Rule: $protocol/$port -> ALLOW"
+            ip netns exec "$namespace" iptables -A INPUT -p "$protocol" --dport "$port" -j ACCEPT
         elif [[ "$action" == "deny" ]]; then
-            target="DROP"
+            log_info "      Rule: $protocol/$port -> DENY (handled by default DROP policy)"
         else
-            log_warning "Unknown action '$action' for port $port, skipping"
-            continue
+            log_info "      Unknown action '$action' for port $port, skipping"
         fi
-        
-        log_info "      Rule: $protocol/$port -> $action"
-        ip netns exec "$namespace" iptables -A INPUT -p "$protocol" --dport "$port" -j "$target"
     done
     
     # Show applied rules
