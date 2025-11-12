@@ -146,7 +146,7 @@ command_exists() {
 # Check if namespace exists
 namespace_exists() {
     local ns_name="$1"
-    ip netns list | grep -q "^${ns_name}$"
+    ip netns list | awk '{print $1}' | grep -q "^${ns_name}$"
 }
 
 
