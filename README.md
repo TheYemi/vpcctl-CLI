@@ -26,16 +26,26 @@ A CLI tool to simulate AWS VPC-like networking using Linux namespaces, bridges, 
 
 ```bash
 # Ubuntu/Debian
+sudo apt update
 sudo apt-get install iproute2 iptables jq
 
 # RHEL/CentOS
 sudo yum install iproute iptables jq
+
+# Install git
+sudo apt update
+sudo apt install git -y
 ```
 
 ### Install vpcctl
 
 ```bash
-# Clone the vpcctl files
+# Clone the vpcctl repo
+git clone git@github.com:TheYemi/vpcctl-CLI.git
+# Go to the scripts folder
+cd vpcctl
+# Make scripts executionable
+sudo chmod +x *.sh 
 # Run the installation script
 sudo bash install.sh
 ```
