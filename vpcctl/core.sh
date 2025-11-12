@@ -9,10 +9,39 @@ create_vpc() {
     local vpc_name="$1"
     local vpc_cidr="$2"
     local subnets="$3"         # Comma-separated list: public,private
-    local enable_nat="$4"      # true or false
+    local enable_nat="$4"      
     
+    local VPC_NAME="$vpc_name"
+    local CIDR_BLOCK="$vpc_cidr"
+    local INTERNET_INTERFACE=$(get_internet_interface)
+
     # Parse subnet types from comma-separated list
     IFS=',' read -ra subnet_array <<< "$subnets"
+
+    local PUBLIC_SUBNET=""
+    local PRIVATE_SUBNET=""
+    local subnet_index=1
+
+    for subnet_type in "${subnet_array[@]}"; do
+        local subnet_cidr=$(generate_subnet_cidr "$vpc_cidr" "$subnet_index")
+        if [[ "$subnet_type" == "public" ]]; then
+            PUBLIC_SUBNET="$subnet_cidr"
+        elif [[ "$subnet_type" == "private" ]]; then
+            PRIVATE_SUBNET="$subnet_cidr"
+        fi
+        subnet_index=$((subnet_index + 1))
+    done
+    
+    # Log required variables
+    log_info "=========================================="
+    log_info "VPC Configuration - Required Variables"
+    log_info "=========================================="
+    log_info "VPC_NAME:           $VPC_NAME"
+    log_info "CIDR_BLOCK:         $CIDR_BLOCK"
+    log_info "PUBLIC_SUBNET:      $PUBLIC_SUBNET"
+    log_info "PRIVATE_SUBNET:     $PRIVATE_SUBNET"
+    log_info "INTERNET_INTERFACE: $INTERNET_INTERFACE"
+    log_info "=========================================="
     
     # Generate bridge name
     local bridge_name=$(get_bridge_name "$vpc_name")
