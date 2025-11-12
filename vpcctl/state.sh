@@ -11,6 +11,14 @@ vpc_exists() {
     jq -e ".vpcs.\"$vpc_name\"" "$VPCCTL_STATE_FILE" > /dev/null 2>&1
 }
 
+# Get VPC data from state
+# Returns JSON object for the VPC
+get_vpc_data() {
+    local vpc_name="$1"
+    
+    jq -r ".vpcs.\"$vpc_name\"" "$VPCCTL_STATE_FILE"
+}
+
 # Save VPC to state
 # Creates a new VPC entry in state file
 save_vpc_state() {
