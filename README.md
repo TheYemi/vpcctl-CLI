@@ -37,11 +37,13 @@ sudo apt update
 sudo apt install git -y
 ```
 
-### Install vpcctl
+### Clone repo and install vpcctl
 
 ```bash
 # Clone the vpcctl repo
-git clone git@github.com:TheYemi/vpcctl-CLI.git
+git clone https://github.com/TheYemi/vpcctl-CLI.git
+# Go into the cloned folder
+cd vpcctl-CLI
 # Go to the scripts folder
 cd vpcctl
 # Make scripts executionable
