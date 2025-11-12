@@ -165,9 +165,10 @@ get_veth_names() {
     
     # Shorten subnet type for veth names (public->pub, private->priv)
     local short_type="${subnet_type:0:3}"
+    local short_vpc="${vpc_name:0:4}"
     
-    local veth_name="veth-${vpc_name}-${short_type}"
-    local veth_br_name="${veth_name}-br"
+    local veth_name="v${short_vpc}${short_type}"
+    local veth_br_name="${veth_name}br"
     
     echo "$veth_name $veth_br_name"
 }
