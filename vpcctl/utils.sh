@@ -77,7 +77,7 @@ get_host_ip() {
     local subnet_cidr="$1"
     local network_prefix=$(get_network_prefix "$subnet_cidr")
     
-    echo "${network_prefix}.0"
+    echo "${network_prefix}.10"
 }
 
 # Generate subnet CIDR from VPC CIDR
