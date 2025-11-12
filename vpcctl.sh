@@ -1,0 +1,557 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Define paths
+VPCCTL_LIB_DIR="/usr/lib/vpcctl"
+VPCCTL_STATE_DIR="/var/lib/vpcctl"
+VPCCTL_STATE_FILE="${VPCCTL_STATE_DIR}/state.json"
+VPCCTL_LOG_FILE="${VPCCTL_STATE_DIR}/vpcctl.log"
+
+# Source library files
+source "${VPCCTL_LIB_DIR}/utils.sh"
+source "${VPCCTL_LIB_DIR}/state.sh"
+source "${VPCCTL_LIB_DIR}/core.sh"
+source "${VPCCTL_LIB_DIR}/subnet.sh"
+source "${VPCCTL_LIB_DIR}/nat.sh"
+source "${VPCCTL_LIB_DIR}/peering.sh"
+source "${VPCCTL_LIB_DIR}/security.sh"
+
+#############################################
+# Print usage information
+#############################################
+usage() {
+    cat << EOF
+Usage: vpcctl <command> [options]
+
+Commands:
+    create      Create a new VPC with subnets
+    list        List all VPCs
+    describe    Show detailed information about a VPC
+    delete      Delete a VPC and all its resources
+    peer        Peer two VPCs together
+    unpeer      Remove peering between two VPCs
+    security    Apply security rules to a subnet
+    exec        Execute a command in a subnet namespace
+    validate    Test connectivity and validate VPC configuration
+    cleanup     Clean up all VPCs
+
+Create Options:
+    --name NAME                VPC name (required)
+    --cidr CIDR                VPC CIDR block (required, e.g., 10.0.0.0/16)
+    --subnets SUBNET_LIST      Comma-separated subnet types (e.g., public,private)
+    --enable-nat               Enable NAT gateway for internet access
+
+Peer Options:
+    --vpc1 NAME                First VPC name
+    --vpc2 NAME                Second VPC name
+
+Security Options:
+    --vpc NAME                 VPC name
+    --subnet TYPE              Subnet type (public or private)
+    --rules-file FILE          JSON file with security rules
+
+Exec Options:
+    --vpc NAME                 VPC name
+    --subnet TYPE              Subnet type
+    -- COMMAND                 Command to execute (everything after --)
+
+Delete Options:
+    --name NAME                VPC name to delete
+
+Validate Options:
+    --vpc NAME                 VPC name to validate
+
+Cleanup Options:
+    --all                      Delete all VPCs (use with caution)
+
+Examples:
+    # Create VPC with public and private subnets
+    vpcctl create --name my-vpc --cidr 10.0.0.0/16 --subnets public,private
+
+    # Create VPC with NAT enabled
+    vpcctl create --name my-vpc --cidr 10.0.0.0/16 --subnets public,private --enable-nat
+
+    # List all VPCs
+    vpcctl list
+
+    # Peer two VPCs
+    vpcctl peer --vpc1 my-vpc --vpc2 other-vpc
+
+    # Apply security rules
+    vpcctl security --vpc my-vpc --subnet public --rules-file rules.json
+
+    # Execute command in subnet
+    vpcctl exec --vpc my-vpc --subnet public -- python3 -m http.server 80
+
+    # Open shell in subnet
+    vpcctl exec --vpc my-vpc --subnet public -- bash
+
+    # Validate VPC
+    vpcctl validate --vpc my-vpc
+
+    # Delete VPC
+    vpcctl delete --name my-vpc
+
+EOF
+    exit 1
+}
+
+#############################################
+# Main command router
+#############################################
+main() {
+    # Check if running as root
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: vpcctl must be run as root (use sudo)"
+        exit 1
+    fi
+
+    # Initialize state directory if it doesn't exist
+    init_state_dir
+
+    # Parse command
+    COMMAND="${1:-}"
+    shift || true
+
+    case "$COMMAND" in
+        create)
+            cmd_create "$@"
+            ;;
+        list)
+            cmd_list "$@"
+            ;;
+        describe)
+            cmd_describe "$@"
+            ;;
+        delete)
+            cmd_delete "$@"
+            ;;
+        peer)
+            cmd_peer "$@"
+            ;;
+        unpeer)
+            cmd_unpeer "$@"
+            ;;
+        security)
+            cmd_security "$@"
+            ;;
+        exec)
+            cmd_exec "$@"
+            ;;
+        validate)
+            cmd_validate "$@"
+            ;;
+        cleanup)
+            cmd_cleanup "$@"
+            ;;
+        help|--help|-h|"")
+            usage
+            ;;
+        *)
+            echo "Error: Unknown command '$COMMAND'"
+            echo ""
+            usage
+            ;;
+    esac
+}
+
+#############################################
+# Command: create
+# Creates a new VPC with specified subnets
+#############################################
+cmd_create() {
+    local vpc_name=""
+    local vpc_cidr=""
+    local subnets=""
+    local enable_nat=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --name)
+                vpc_name="$2"
+                shift 2
+                ;;
+            --cidr)
+                vpc_cidr="$2"
+                shift 2
+                ;;
+            --subnets)
+                subnets="$2"
+                shift 2
+                ;;
+            --enable-nat)
+                enable_nat=true
+                shift
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    # Validate required arguments
+    if [[ -z "$vpc_name" ]]; then
+        echo "Error: --name is required"
+        exit 1
+    fi
+
+    if [[ -z "$vpc_cidr" ]]; then
+        echo "Error: --cidr is required"
+        exit 1
+    fi
+
+    if [[ -z "$subnets" ]]; then
+        echo "Error: --subnets is required (e.g., public,private)"
+        exit 1
+    fi
+
+    # Check if VPC already exists
+    if vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' already exists"
+        exit 1
+    fi
+
+    # Validate CIDR format
+    if ! validate_cidr "$vpc_cidr"; then
+        echo "Error: Invalid CIDR format '$vpc_cidr'"
+        exit 1
+    fi
+
+    # Create VPC
+    log_info "Creating VPC '$vpc_name' with CIDR $vpc_cidr"
+    create_vpc "$vpc_name" "$vpc_cidr" "$subnets" "$enable_nat"
+
+    log_success "VPC '$vpc_name' created successfully"
+}
+
+#############################################
+# Command: list
+# Lists all VPCs
+#############################################
+cmd_list() {
+    list_vpcs
+}
+
+#############################################
+# Command: describe
+# Shows detailed VPC information
+#############################################
+cmd_describe() {
+    local vpc_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc|--name)
+                vpc_name="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]]; then
+        echo "Error: --vpc is required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    describe_vpc "$vpc_name"
+}
+
+#############################################
+# Command: delete
+# Deletes a VPC
+#############################################
+cmd_delete() {
+    local vpc_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --name|--vpc)
+                vpc_name="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]]; then
+        echo "Error: --name is required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    log_info "Deleting VPC '$vpc_name'"
+    delete_vpc "$vpc_name"
+    log_success "VPC '$vpc_name' deleted successfully"
+}
+
+#############################################
+# Command: peer
+# Peers two VPCs together
+#############################################
+cmd_peer() {
+    local vpc1=""
+    local vpc2=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc1)
+                vpc1="$2"
+                shift 2
+                ;;
+            --vpc2)
+                vpc2="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc1" ]] || [[ -z "$vpc2" ]]; then
+        echo "Error: Both --vpc1 and --vpc2 are required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc1"; then
+        echo "Error: VPC '$vpc1' does not exist"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc2"; then
+        echo "Error: VPC '$vpc2' does not exist"
+        exit 1
+    fi
+
+    log_info "Peering VPC '$vpc1' with VPC '$vpc2'"
+    peer_vpcs "$vpc1" "$vpc2"
+    log_success "VPCs '$vpc1' and '$vpc2' peered successfully"
+}
+
+#############################################
+# Command: unpeer
+# Removes peering between VPCs
+#############################################
+cmd_unpeer() {
+    local vpc1=""
+    local vpc2=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc1)
+                vpc1="$2"
+                shift 2
+                ;;
+            --vpc2)
+                vpc2="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc1" ]] || [[ -z "$vpc2" ]]; then
+        echo "Error: Both --vpc1 and --vpc2 are required"
+        exit 1
+    fi
+
+    log_info "Removing peering between '$vpc1' and '$vpc2'"
+    unpeer_vpcs "$vpc1" "$vpc2"
+    log_success "Peering removed successfully"
+}
+
+#############################################
+# Command: security
+# Applies security rules to a subnet
+#############################################
+cmd_security() {
+    local vpc_name=""
+    local subnet_type=""
+    local rules_file=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc)
+                vpc_name="$2"
+                shift 2
+                ;;
+            --subnet)
+                subnet_type="$2"
+                shift 2
+                ;;
+            --rules-file)
+                rules_file="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]] || [[ -z "$subnet_type" ]] || [[ -z "$rules_file" ]]; then
+        echo "Error: --vpc, --subnet, and --rules-file are required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    if [[ ! -f "$rules_file" ]]; then
+        echo "Error: Rules file '$rules_file' not found"
+        exit 1
+    fi
+
+    log_info "Applying security rules to $subnet_type subnet in VPC '$vpc_name'"
+    apply_security_rules "$vpc_name" "$subnet_type" "$rules_file"
+    log_success "Security rules applied successfully"
+}
+
+#############################################
+# Command: exec
+# Executes a command in a subnet namespace
+#############################################
+cmd_exec() {
+    local vpc_name=""
+    local subnet_type=""
+    local command_args=()
+
+    # Parse until we hit --
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc)
+                vpc_name="$2"
+                shift 2
+                ;;
+            --subnet)
+                subnet_type="$2"
+                shift 2
+                ;;
+            --)
+                shift
+                command_args=("$@")
+                break
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]] || [[ -z "$subnet_type" ]]; then
+        echo "Error: --vpc and --subnet are required"
+        exit 1
+    fi
+
+    if [[ ${#command_args[@]} -eq 0 ]]; then
+        echo "Error: No command specified after --"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    exec_in_subnet "$vpc_name" "$subnet_type" "${command_args[@]}"
+}
+
+#############################################
+# Command: validate
+# Validates VPC connectivity and configuration
+#############################################
+cmd_validate() {
+    local vpc_name=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --vpc)
+                vpc_name="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ -z "$vpc_name" ]]; then
+        echo "Error: --vpc is required"
+        exit 1
+    fi
+
+    if ! vpc_exists "$vpc_name"; then
+        echo "Error: VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+
+    log_info "Validating VPC '$vpc_name'"
+    validate_vpc "$vpc_name"
+}
+
+#############################################
+# Command: cleanup
+# Cleans up all VPCs
+#############################################
+cmd_cleanup() {
+    local cleanup_all=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --all)
+                cleanup_all=true
+                shift
+                ;;
+            *)
+                echo "Error: Unknown option '$1'"
+                usage
+                ;;
+        esac
+    done
+
+    if [[ "$cleanup_all" != true ]]; then
+        echo "Error: --all flag is required for cleanup"
+        exit 1
+    fi
+
+    log_warning "This will delete ALL VPCs. Are you sure? (yes/no)"
+    read -r confirmation
+    if [[ "$confirmation" != "yes" ]]; then
+        echo "Cleanup cancelled"
+        exit 0
+    fi
+
+    cleanup_all_vpcs
+    log_success "All VPCs cleaned up successfully"
+}
+
+# Run main function
+main "$@"
