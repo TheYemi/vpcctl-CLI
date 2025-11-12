@@ -120,11 +120,10 @@ get_veth_names() {
     local subnet_type="$2"
     
     # Shorten subnet type for veth names (public->pub, private->pri)
-    local short_vpc="${vpc_name:0:4}"
     local short_type="${subnet_type:0:3}"
     
-    local veth_name="v${short_vpc}${short_type}"
-    local veth_br_name="${veth_name}br"
+    local veth_name="v${vpc_name}${short_type}"
+    local veth_br_name="${vpc_name}br"
     
     echo "$veth_name $veth_br_name"
 }
@@ -135,13 +134,9 @@ get_peering_veth_names() {
     local vpc1="$1"
     local vpc2="$2"
 
-    # Shorten VPC names
-    local short1="${vpc1:0:3}"
-    local short2="${vpc2:0:3}"
-
     # Generate compact veth names
-    local veth1="vp${short1}${short2}-1"
-    local veth2="vp${short1}${short2}-2"
+    local veth1="vp${vpc1}${vpc2}-1"
+    local veth2="vp${vpc1}${vpc2}-2"
     
     echo "$veth1 $veth2"
 }
