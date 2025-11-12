@@ -1,49 +1,7 @@
 {
-  "subnet": "10.0.1.0/24",
+  "subnet": "10.2.1.0/24",
   "ingress": [
-    {
-      "port": 80,
-      "protocol": "tcp",
-      "action": "allow",
-      "description": "Allow HTTP traffic"
-    },
-    {
-      "port": 443,
-      "protocol": "tcp",
-      "action": "allow",
-      "description": "Allow HTTPS traffic"
-    },
-    {
-      "port": 22,
-      "protocol": "tcp",
-      "action": "deny",
-      "description": "Deny SSH access"
-    },
-    {
-      "port": 3306,
-      "protocol": "tcp",
-      "action": "deny",
-      "description": "Deny MySQL access"
-    }
-  ],
-  "egress": [
-    {
-      "port": 53,
-      "protocol": "udp",
-      "action": "allow",
-      "description": "Allow DNS queries"
-    },
-    {
-      "port": 80,
-      "protocol": "tcp",
-      "action": "allow",
-      "description": "Allow outbound HTTP"
-    },
-    {
-      "port": 443,
-      "protocol": "tcp",
-      "action": "allow",
-      "description": "Allow outbound HTTPS"
-    }
+    {"port": 80, "protocol": "tcp", "action": "allow"},
+    {"port": 22, "protocol": "tcp", "action": "deny"}
   ]
 }
