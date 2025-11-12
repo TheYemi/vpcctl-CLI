@@ -156,7 +156,7 @@ configure_bridge_routing() {
     
     # Enable IP forwarding on the bridge
     log_info "  Enabling IP forwarding"
-    enable_ip_forward
+    echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
 }
 
 # Delete VPC
