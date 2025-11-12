@@ -77,7 +77,7 @@ get_host_ip() {
     local subnet_cidr="$1"
     local network_prefix=$(get_network_prefix "$subnet_cidr")
     
-    echo "${network_prefix}.10"
+    echo "${network_prefix}.0"
 }
 
 # Generate subnet CIDR from VPC CIDR
@@ -107,10 +107,7 @@ get_bridge_name() {
 get_namespace_name() {
     local vpc_name="$1"
     local subnet_type="$2"
-   
-    local short_type="${subnet_type:0:3}"
-
-    echo "${vpc_name}-${short_type}-sn"
+    echo "${vpc_name}-${subnet_type}-subnet"
 }
 
 # Generate veth pair names for subnet

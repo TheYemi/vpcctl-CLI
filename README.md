@@ -133,7 +133,7 @@ sudo vpcctl delete --name my-vpc
 ### `create` - Create a new VPC
 
 ```bash
-vpcctl create --name NAME --cidr CIDR --subnets TYPES [--enable-nat]
+sudo vpcctl create --name NAME --cidr CIDR --subnets TYPES [--enable-nat]
 ```
 
 Options:
@@ -145,55 +145,55 @@ Options:
 ### `list` - List all VPCs
 
 ```bash
-vpcctl list
+sudo vpcctl list
 ```
 
 ### `describe` - Show VPC details
 
 ```bash
-vpcctl describe --vpc NAME
+sudo vpcctl describe --vpc NAME
 ```
 
 ### `delete` - Delete a VPC
 
 ```bash
-vpcctl delete --name NAME
+sudo vpcctl delete --name NAME
 ```
 
 ### `peer` - Peer two VPCs
 
 ```bash
-vpcctl peer --vpc1 NAME1 --vpc2 NAME2
+sudo vpcctl peer --vpc1 NAME1 --vpc2 NAME2
 ```
 
 ### `unpeer` - Remove VPC peering
 
 ```bash
-vpcctl unpeer --vpc1 NAME1 --vpc2 NAME2
+sudo vpcctl unpeer --vpc1 NAME1 --vpc2 NAME2
 ```
 
 ### `security` - Apply security rules
 
 ```bash
-vpcctl security --vpc NAME --subnet TYPE --rules-file FILE
+sudo vpcctl security --vpc NAME --subnet TYPE --rules-file FILE
 ```
 
 ### `exec` - Execute command in subnet
 
 ```bash
-vpcctl exec --vpc NAME --subnet TYPE -- COMMAND [ARGS...]
+sudo vpcctl exec --vpc NAME --subnet TYPE -- COMMAND [ARGS...]
 ```
 
 ### `validate` - Validate VPC configuration
 
 ```bash
-vpcctl validate --vpc NAME
+sudo vpcctl validate --vpc NAME
 ```
 
 ### `cleanup` - Delete all VPCs
 
 ```bash
-vpcctl cleanup --all
+sudo vpcctl cleanup --all
 ```
 
 ## Security Rules Format
@@ -334,12 +334,12 @@ sudo vpcctl exec --vpc secure-vpc --subnet private -- nc -zv 10.2.1.10 22
 
 ### Check VPC state
 ```bash
-cat /var/lib/vpcctl/state.json | jq .
+sudo cat /var/lib/vpcctl/state.json | jq .
 ```
 
 ### View logs
 ```bash
-tail -f /var/lib/vpcctl/vpcctl.log
+sudo tail -f /var/lib/vpcctl/vpcctl.log
 ```
 
 ### Check namespaces
