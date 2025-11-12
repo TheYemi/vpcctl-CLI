@@ -1,9 +1,7 @@
 #!/bin/bash
 
-#############################################
 # Installation script for vpcctl
 # Installs vpcctl and all its dependencies
-#############################################
 
 set -e
 

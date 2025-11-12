@@ -1,15 +1,10 @@
 #!/bin/bash
 
-#############################################
 # nat.sh - NAT Gateway configuration
 # Simulates Internet Gateway for VPC
-#############################################
 
-#############################################
 # Configure NAT Gateway
 # Enables internet access for the VPC
-# This follows your manual commands exactly
-#############################################
 configure_nat_gateway() {
     local vpc_name="$1"
     local vpc_cidr="$2"
@@ -63,11 +58,9 @@ configure_nat_gateway() {
     log_success "  NAT gateway configured for VPC '$vpc_name'"
 }
 
-#############################################
 # Remove Private Subnet Internet Access
 # Removes default route from private subnet
 # Adds route to reach other VPC subnets only
-#############################################
 remove_private_subnet_internet() {
     local vpc_name="$1"
     local subnet_type="$2"
@@ -90,11 +83,9 @@ remove_private_subnet_internet() {
     log_success "  $subnet_type subnet isolated (VPC-only access)"
 }
 
-#############################################
 # Update NAT Rules for Peering
 # When peering VPCs, NAT rules must exclude peer CIDR
 # This prevents NAT from interfering with VPC-to-VPC traffic
-#############################################
 update_nat_rules_for_peering() {
     local vpc_name="$1"
     local peer_vpc_cidr="$2"
@@ -115,10 +106,8 @@ update_nat_rules_for_peering() {
     log_success "  NAT rules updated"
 }
 
-#############################################
 # Cleanup NAT Rules
 # Removes NAT rules for a VPC
-#############################################
 cleanup_nat_rules() {
     local vpc_cidr="$1"
     local internet_iface=$(get_internet_interface)

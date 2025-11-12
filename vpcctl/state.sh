@@ -1,13 +1,9 @@
 #!/bin/bash
 
-#############################################
 # state.sh - State management for vpcctl
 # Handles reading/writing VPC state to JSON file
-#############################################
 
-#############################################
 # Check if VPC exists in state
-#############################################
 vpc_exists() {
     local vpc_name="$1"
     
@@ -15,10 +11,8 @@ vpc_exists() {
     jq -e ".vpcs.\"$vpc_name\"" "$VPCCTL_STATE_FILE" > /dev/null 2>&1
 }
 
-#############################################
 # Save VPC to state
 # Creates a new VPC entry in state file
-#############################################
 save_vpc_state() {
     local vpc_name="$1"
     local vpc_cidr="$2"
@@ -40,9 +34,7 @@ save_vpc_state() {
     mv "$tmp_file" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Add subnet to VPC state
-#############################################
 add_subnet_to_state() {
     local vpc_name="$1"
     local subnet_type="$2"
@@ -66,9 +58,7 @@ add_subnet_to_state() {
     mv "$tmp_file" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Add peering to VPC state
-#############################################
 add_peering_to_state() {
     local vpc1="$1"
     local vpc2="$2"
@@ -85,9 +75,7 @@ add_peering_to_state() {
     mv "$tmp_file" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Remove peering from VPC state
-#############################################
 remove_peering_from_state() {
     local vpc1="$1"
     local vpc2="$2"
@@ -104,9 +92,7 @@ remove_peering_from_state() {
     mv "$tmp_file" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Delete VPC from state
-#############################################
 delete_vpc_from_state() {
     local vpc_name="$1"
     
@@ -115,10 +101,8 @@ delete_vpc_from_state() {
     mv "$tmp_file" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # List all VPCs
 # Prints formatted list of VPCs
-#############################################
 list_vpcs() {
     echo "============================================"
     echo "VPCs"
@@ -146,10 +130,8 @@ list_vpcs() {
     echo ""
 }
 
-#############################################
 # Describe VPC
 # Shows detailed information about a VPC
-#############################################
 describe_vpc() {
     local vpc_name="$1"
     
@@ -211,49 +193,37 @@ describe_vpc() {
     echo ""
 }
 
-#############################################
 # Get all VPC names
-#############################################
 get_all_vpc_names() {
     jq -r '.vpcs | keys[]' "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Get VPC CIDR
-#############################################
 get_vpc_cidr() {
     local vpc_name="$1"
     jq -r ".vpcs.\"$vpc_name\".cidr" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Get VPC bridge name
-#############################################
 get_vpc_bridge() {
     local vpc_name="$1"
     jq -r ".vpcs.\"$vpc_name\".bridge" "$VPCCTL_STATE_FILE"
 }
 
-#############################################
 # Check if VPC has NAT enabled
-#############################################
 is_nat_enabled() {
     local vpc_name="$1"
     local nat_enabled=$(jq -r ".vpcs.\"$vpc_name\".nat_enabled" "$VPCCTL_STATE_FILE")
     [[ "$nat_enabled" == "true" ]]
 }
 
-#############################################
 # Get VPC peerings
-#############################################
 get_vpc_peerings() {
     local vpc_name="$1"
     jq -r ".vpcs.\"$vpc_name\".peerings[]" "$VPCCTL_STATE_FILE" 2>/dev/null
 }
 
-#############################################
 # Get subnet namespace name
-#############################################
 get_subnet_namespace() {
     local vpc_name="$1"
     local subnet_type="$2"
@@ -266,9 +236,21 @@ get_subnet_namespace() {
     echo "$result"
 }
 
-#############################################
+# Get subnet CIDR
+get_subnet_cidr() {
+    local vpc_name="$1"
+    local subnet_type="$2"
+    jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".cidr" "$VPCCTL_STATE_FILE"
+}
+
+# Get subnet host IP
+get_subnet_host_ip() {
+    local vpc_name="$1"
+    local subnet_type="$2"
+    jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".host_ip" "$VPCCTL_STATE_FILE"
+}
+
 # Get all subnet types for VPC
-#############################################
 get_vpc_subnet_types() {
     local vpc_name="$1"
     jq -r ".vpcs.\"$vpc_name\".subnets | keys[]" "$VPCCTL_STATE_FILE"

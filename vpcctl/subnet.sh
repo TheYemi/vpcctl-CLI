@@ -1,13 +1,10 @@
 #!/bin/bash
 
-#############################################
 # subnet.sh - Subnet management operations
-# Additional subnet-specific functions
-#############################################
+# Subnet-specific functions
 
-#############################################
 # List subnets for a VPC
-#############################################
+
 list_subnets() {
     local vpc_name="$1"
     

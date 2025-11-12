@@ -1,15 +1,11 @@
 #!/bin/bash
 
-#############################################
 # peering.sh - VPC Peering operations
 # Connects two VPCs together
-#############################################
 
-#############################################
 # Peer VPCs
 # Creates peering connection between two VPCs
-# This follows your manual commands exactly
-#############################################
+
 peer_vpcs() {
     local vpc1="$1"
     local vpc2="$2"
@@ -89,10 +85,8 @@ peer_vpcs() {
     log_success "  VPCs '$vpc1' and '$vpc2' peered successfully"
 }
 
-#############################################
 # Unpeer VPCs
 # Removes peering connection between two VPCs
-#############################################
 unpeer_vpcs() {
     local vpc1="$1"
     local vpc2="$2"

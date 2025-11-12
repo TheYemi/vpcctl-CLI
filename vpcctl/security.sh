@@ -134,7 +134,6 @@ clear_security_rules() {
     log_success "  Security rules cleared"
 }
 
-#############################################
 # Show Security Rules
 # Displays current iptables rules in namespace
 show_security_rules() {
