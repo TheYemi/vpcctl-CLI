@@ -123,7 +123,7 @@ get_veth_names() {
     local short_type="${subnet_type:0:3}"
     
     local veth_name="v${vpc_name}${short_type}"
-    local veth_br_name="${vpc_name}br"
+    local veth_br_name="${vpc_name}{short_type}br"
     
     echo "$veth_name $veth_br_name"
 }

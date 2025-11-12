@@ -17,9 +17,7 @@ source "${VPCCTL_LIB_DIR}/nat.sh"
 source "${VPCCTL_LIB_DIR}/peering.sh"
 source "${VPCCTL_LIB_DIR}/security.sh"
 
-#############################################
 # Print usage information
-#############################################
 usage() {
     cat << EOF
 Usage: vpcctl <command> [options]
@@ -101,9 +99,7 @@ EOF
     exit 1
 }
 
-#############################################
 # Main command router
-#############################################
 main() {
     # Check if running as root
     if [[ $EUID -ne 0 ]]; then
@@ -163,10 +159,8 @@ main() {
     esac
 }
 
-#############################################
 # Command: create
 # Creates a new VPC with specified subnets
-#############################################
 cmd_create() {
     local vpc_name="" vpc_cidr="" subnets="" enable_nat=false
     
@@ -189,21 +183,17 @@ cmd_create() {
     validate_cidr "$vpc_cidr" || { echo "Error: Invalid CIDR '$vpc_cidr'"; exit 1; }
     
     create_vpc "$vpc_name" "$vpc_cidr" "$subnets" "$enable_nat"
-    echo "✓ VPC '$vpc_name' created successfully"
+    echo "VPC '$vpc_name' created successfully"
 }
 
-#############################################
 # Command: list
 # Lists all VPCs
-#############################################
 cmd_list() {
     list_vpcs
 }
 
-#############################################
 # Command: describe
 # Shows detailed VPC information
-#############################################
 cmd_describe() {
     local vpc_name=""
 
@@ -233,10 +223,8 @@ cmd_describe() {
     describe_vpc "$vpc_name"
 }
 
-#############################################
 # Command: subnets
 # Lists all subnets in a VPC
-#############################################
 cmd_subnets() {
     local vpc_name=""
 
@@ -266,10 +254,8 @@ cmd_subnets() {
     list_subnets "$vpc_name"
 }
 
-#############################################
 # Command: delete
 # Deletes a VPC
-#############################################
 cmd_delete() {
     local vpc_name=""
 
@@ -301,10 +287,8 @@ cmd_delete() {
     log_success "VPC '$vpc_name' deleted successfully"
 }
 
-#############################################
 # Command: peer
 # Peers two VPCs together
-#############################################
 cmd_peer() {
     local vpc1=""
     local vpc2=""
@@ -346,10 +330,8 @@ cmd_peer() {
     log_success "VPCs '$vpc1' and '$vpc2' peered successfully"
 }
 
-#############################################
 # Command: unpeer
 # Removes peering between VPCs
-#############################################
 cmd_unpeer() {
     local vpc1=""
     local vpc2=""
@@ -381,10 +363,8 @@ cmd_unpeer() {
     log_success "Peering removed successfully"
 }
 
-#############################################
 # Command: security
 # Applies security rules to a subnet
-#############################################
 cmd_security() {
     local vpc_name=""
     local subnet_type=""
@@ -431,10 +411,8 @@ cmd_security() {
     log_success "Security rules applied successfully"
 }
 
-#############################################
 # Command: exec
 # Executes a command in a subnet namespace
-#############################################
 cmd_exec() {
     local vpc_name=""
     local subnet_type=""
@@ -481,10 +459,8 @@ cmd_exec() {
     exec_in_subnet "$vpc_name" "$subnet_type" "${command_args[@]}"
 }
 
-#############################################
 # Command: validate
 # Validates VPC connectivity and configuration
-#############################################
 cmd_validate() {
     local vpc_name=""
 
@@ -515,10 +491,8 @@ cmd_validate() {
     validate_vpc "$vpc_name"
 }
 
-#############################################
 # Command: cleanup
 # Cleans up all VPCs
-#############################################
 cmd_cleanup() {
     local cleanup_all=false
 
