@@ -44,19 +44,9 @@ test_subnet_connectivity() {
     local vpc_name="$1"
     local subnet_type="$2"
     
-    if ! vpc_exists "$vpc_name"; then
-        log_error "VPC '$vpc_name' does not exist"
-        exit 1
-    fi
+    local namespace=$(get_namespace_name "$vpc_name" "$subnet_type")
     
-    local namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type")
-    
-    if ! namespace_exists "$namespace"; then
-        log_error "Subnet $subnet_type does not exist in VPC $vpc_name"
-        exit 1
-    fi
-    
-    echo "Testing connectivity from $subnet_type subnet..."
+    echo "Testing connectivity from $subnet_type subnet $namespace..."
     echo ""
     
     # Test connectivity to all other subnets
@@ -94,17 +84,7 @@ show_subnet_routes() {
     local vpc_name="$1"
     local subnet_type="$2"
     
-    if ! vpc_exists "$vpc_name"; then
-        log_error "VPC '$vpc_name' does not exist"
-        exit 1
-    fi
-    
     local namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type")
-    
-    if ! namespace_exists "$namespace"; then
-        log_error "Subnet $subnet_type does not exist in VPC $vpc_name"
-        exit 1
-    fi
     
     echo ""
     echo "============================================"
@@ -119,19 +99,9 @@ show_subnet_routes() {
 show_subnet_interfaces() {
     local vpc_name="$1"
     local subnet_type="$2"
-    
-    if ! vpc_exists "$vpc_name"; then
-        log_error "VPC '$vpc_name' does not exist"
-        exit 1
-    fi
-    
+ 
     local namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type")
-    
-    if ! namespace_exists "$namespace"; then
-        log_error "Subnet $subnet_type does not exist in VPC $vpc_name"
-        exit 1
-    fi
-    
+
     echo ""
     echo "============================================"
     echo "Network interfaces for $subnet_type in VPC $vpc_name"
