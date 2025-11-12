@@ -354,28 +354,38 @@ exec_in_subnet() {
     shift 2
     local command=("$@")
     
-    # Get namespace
+    # Check if VPC exists first
+    if ! vpc_exists "$vpc_name"; then
+        log_error "VPC '$vpc_name' does not exist"
+        exit 1
+    fi
+    
+    # Get namespace - TRY BOTH METHODS
     local namespace
-    if ! namespace=$(get_subnet_namespace "$vpc_name" "$subnet_type"); then
+    
+    # Method 1: Try to get from state
+    namespace=$(jq -r ".vpcs.\"$vpc_name\".subnets.\"$subnet_type\".namespace // empty" "$VPCCTL_STATE_FILE" 2>/dev/null)
+    
+    # ADDED: If empty or null, show better error
+    if [[ -z "$namespace" ]] || [[ "$namespace" == "null" ]]; then
         log_error "Subnet '$subnet_type' does not exist in VPC '$vpc_name'"
-        log_info "Available subnets:"
-        get_vpc_subnet_types "$vpc_name" | while read -r st; do
+        log_info "Available subnets in state:"
+        jq -r ".vpcs.\"$vpc_name\".subnets | keys[]" "$VPCCTL_STATE_FILE" 2>/dev/null | while read -r st; do
             echo "  - $st"
         done
         exit 1
     fi
     
-    if [[ -z "$namespace" ]]; then
-        log_error "Subnet '$subnet_type' does not exist in VPC '$vpc_name'"
-        exit 1
-    fi
-    
+    # ADDED: Verify namespace actually exists
     if ! namespace_exists "$namespace"; then
-        log_error "Namespace '$namespace' does not exist (state may be out of sync)"
+        log_error "Namespace '$namespace' found in state but does not exist in system"
+        log_info "This means state is out of sync. Try recreating the VPC."
+        log_info "Namespaces that exist:"
+        ip netns list | sed 's/^/  - /'
         exit 1
     fi
     
-    log_info "Executing command in $subnet_type subnet of VPC $vpc_name"
+    log_info "Executing command in $subnet_type subnet of VPC $vpc_name (namespace: $namespace)"
     
     # Execute command in namespace
     ip netns exec "$namespace" "${command[@]}"
