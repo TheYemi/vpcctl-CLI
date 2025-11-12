@@ -177,7 +177,7 @@ delete_vpc() {
         unpeer_vpcs "$vpc_name" "$peer_vpc"
     done
     
-    # Step 2: Delete namespaces (this automatically removes veth interfaces inside)
+    # Step 2: Delete namespaces
     log_info "  Deleting namespaces"
     local subnet_types=$(get_vpc_subnet_types "$vpc_name")
     for subnet_type in $subnet_types; do
@@ -188,12 +188,12 @@ delete_vpc() {
         fi
     done
     
-    # Step 3: Delete veth pairs in host (bridge side)
+    # Step 3: Delete veth pairs in host
     log_info "  Deleting veth pairs"
     for subnet_type in $subnet_types; do
         read veth_name veth_br_name <<< $(get_veth_names "$vpc_name" "$subnet_type")
         
-        # Try to delete veth-br (this also deletes the pair)
+        # Delete veth-br (this also deletes the pair)
         ip link del "$veth_br_name" 2>/dev/null || true
     done
     
