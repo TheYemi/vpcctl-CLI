@@ -1,15 +1,11 @@
 #!/bin/bash
 
-#############################################
 # security.sh - Security group operations
 # Implements firewall rules using iptables
-#############################################
 
-#############################################
 # Apply Security Rules
 # Applies iptables rules from JSON file to subnet
 # This follows your manual iptables commands
-#############################################
 apply_security_rules() {
     local vpc_name="$1"
     local subnet_type="$2"
@@ -111,10 +107,8 @@ apply_security_rules() {
     echo ""
 }
 
-#############################################
 # Clear Security Rules
 # Resets iptables in namespace to default
-#############################################
 clear_security_rules() {
     local vpc_name="$1"
     local subnet_type="$2"
@@ -143,7 +137,6 @@ clear_security_rules() {
 #############################################
 # Show Security Rules
 # Displays current iptables rules in namespace
-#############################################
 show_security_rules() {
     local vpc_name="$1"
     local subnet_type="$2"

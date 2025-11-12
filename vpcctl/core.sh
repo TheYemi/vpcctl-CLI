@@ -1,14 +1,10 @@
 #!/bin/bash
 
-#############################################
 # core.sh - Core VPC operations
 # Creates, deletes, and manages VPCs
-#############################################
 
-#############################################
 # Create VPC
 # Main function that orchestrates VPC creation
-#############################################
 create_vpc() {
     local vpc_name="$1"
     local vpc_cidr="$2"
@@ -56,11 +52,8 @@ create_vpc() {
     log_success "VPC '$vpc_name' created with ${#subnet_array[@]} subnet(s)"
 }
 
-#############################################
 # Create VPC Bridge
 # Creates the central bridge that acts as a router
-# This follows your manual commands exactly
-#############################################
 create_vpc_bridge() {
     local bridge_name="$1"
     local vpc_cidr="$2"
@@ -82,11 +75,8 @@ create_vpc_bridge() {
     ip addr add "${bridge_ip}/${prefix}" dev "$bridge_name"
 }
 
-#############################################
 # Create Subnet
 # Creates a subnet namespace and connects it to the bridge
-# This follows your manual commands exactly
-#############################################
 create_subnet() {
     local vpc_name="$1"
     local vpc_cidr="$2"
@@ -145,11 +135,9 @@ create_subnet() {
     log_success "  Subnet $subnet_type ($subnet_cidr) created"
 }
 
-#############################################
 # Configure Bridge Routing
 # Adds gateway IPs for each subnet on the bridge
 # Enables IP forwarding
-#############################################
 configure_bridge_routing() {
     local bridge_name="$1"
     local vpc_name="$2"
@@ -171,10 +159,8 @@ configure_bridge_routing() {
     enable_ip_forward
 }
 
-#############################################
 # Delete VPC
 # Removes all VPC resources
-#############################################
 delete_vpc() {
     local vpc_name="$1"
     
@@ -236,10 +222,8 @@ delete_vpc() {
     log_success "  VPC '$vpc_name' deleted"
 }
 
-#############################################
 # Cleanup All VPCs
 # Deletes all VPCs in the system
-#############################################
 cleanup_all_vpcs() {
     local vpc_names=$(get_all_vpc_names)
     
@@ -256,10 +240,8 @@ cleanup_all_vpcs() {
     log_success "All VPCs cleaned up"
 }
 
-#############################################
 # Validate VPC
 # Tests connectivity and configuration
-#############################################
 validate_vpc() {
     local vpc_name="$1"
     
@@ -364,10 +346,8 @@ validate_vpc() {
     fi
 }
 
-#############################################
 # Execute command in subnet
 # Runs a command inside a subnet namespace
-#############################################
 exec_in_subnet() {
     local vpc_name="$1"
     local subnet_type="$2"
